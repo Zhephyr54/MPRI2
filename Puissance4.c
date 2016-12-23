@@ -433,9 +433,12 @@ FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
 
                 k++;
             }
+            // Si aucun coup gagnant n'est possible
+            if (coupAJoue == NULL)
+                coupAJoue = coups[rand() % k];  // On joue un coup aléatoirement
         }
-        // Sinon ou si aucun coup gagnant n'est possible, on choisit le coup aléatoirement
-        if (coupAJoue == NULL) {
+        // Sinon, on choisit le coup aléatoirement
+        else {
             int k = 0;
             while (coups[k] != NULL)    k++;
             coupAJoue = coups[rand() % k];  // On joue un coup aléatoirement
