@@ -409,17 +409,42 @@ Noeud * expansionNoeud(Noeud * noeud) {
 
 // Simule le déroulement de la partie à partir d'un état
 // jusqu'à la fin et retourne l'état final.
-FinDePartie simulerPartie(Etat * etat) {
+// Si choisirCoupGagnant est à vrai,
+// on améliore les simulations en choisissant un coup gagnant lorsque cela est possible.
+FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
     FinDePartie resultatFinDePartie;
     // Tant que la partie n'est pas terminée
     while ((resultatFinDePartie = testFin(etat)) == NON) {
         Coup** coups = coups_possibles(etat);
-        int k = 0;
-        while (coups[k] != NULL)    k++;
+        Coup* coupAJoue = NULL;
 
-        jouerCoup(etat, coups[rand() % k]);  // On joue un coup aléatoirement
+        // Si on doit choisir un coup gagnant quand cela est possible
+        if (choisirCoupGagnant) {
+            int k = 0;
+            // On teste tous les coups pour voir si un des coups est gagnant
+            while (coups[k] != NULL && coupAJoue == NULL) {
+                Etat * etatATester = copieEtat(etat);
+                jouerCoup(etatATester, coups[k]);
+
+                if (testFin(etatATester) == ORDI_GAGNE)
+                    coupAJoue = coups[k];
+
+                free(etatATester);
+
+                k++;
+            }
+        }
+        // Sinon ou si aucun coup gagnant n'est possible, on choisit le coup aléatoirement
+        if (coupAJoue == NULL) {
+            int k = 0;
+            while (coups[k] != NULL)    k++;
+            coupAJoue = coups[rand() % k];  // On joue un coup aléatoirement
+        }
+
+        jouerCoup(etat, coupAJoue);  // On joue le coup
+
         // On libère la mémoire
-        k = 0;
+        int k = 0;
         while (coups[k] != NULL) {
             free(coups[k]);
             k++;
@@ -506,7 +531,7 @@ void ordijoue_mcts(Etat * etat, int tempsmax) {
         enfant = expansionNoeud(noeudSelectionne);
         // Simulation
         Etat * etatCopie = copieEtat(enfant->etat);
-        FinDePartie resultat = simulerPartie(etatCopie);
+        FinDePartie resultat = simulerPartie(etatCopie, true);
         free(etatCopie);
         // Propagation
         propagerResultat(enfant, resultat);
@@ -526,11 +551,12 @@ void ordijoue_mcts(Etat * etat, int tempsmax) {
     // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
     // et une estimation de la probabilité de victoire pour l'ordinateur
     printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
+    printf("\nEstimation de probabilité de victoire pour l'ordinateur : ");
     if (noeudMeilleurCoup->nb_simus > 0)
-        printf("\nProbabilité de victoire pour l'ordinateur : %0.2f %%\n",
-               (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
+        printf("%0.2f %%", (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
     else
-        printf("\nProbabilité de victoire pour l'ordinateur : inconnue\n");
+        printf("inconnue");
+    printf("\n");
 
 
 	// Jouer le meilleur premier coup
