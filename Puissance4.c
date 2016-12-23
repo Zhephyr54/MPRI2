@@ -186,7 +186,8 @@ typedef struct NoeudSt {
 	int nb_enfants;	// nb d'enfants présents dans la liste
 
 	// POUR MCTS:
-	double sommes_recompenses;
+	int nb_victoires;   // Pour calculer les stats
+	double sommes_recompenses;  // Pour calculer la B-valeur (car match nul pris en compte)
 	int nb_simus;
 
 } Noeud;
@@ -212,6 +213,7 @@ Noeud * nouveauNoeud (Noeud * parent, Coup * coup ) {
 	noeud->nb_enfants = 0;
 
 	// POUR MCTS:
+	noeud->nb_victoires = 0;
 	noeud->sommes_recompenses = 0;
 	noeud->nb_simus = 0;
 
@@ -437,6 +439,7 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat) {
         noeud->nb_simus++;
         switch(resultat) {
             case ORDI_GAGNE :
+                noeud->nb_victoires++;
                 noeud->sommes_recompenses += RECOMPENSE_ORDI_GAGNE;
                 break;
             case HUMAIN_GAGNE :
@@ -451,9 +454,9 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat) {
 
 }
 
-// Trouve le meilleur coup possible
+// Trouve le noeud correspondant au meilleur coup possible
 // à partir de la racine.
-Coup * trouverMeilleurCoup(Noeud * racine) {
+Noeud * trouverNoeudMeilleurCoup(Noeud * racine) {
 
     // Le meilleur coup actuel correspond au noeud fils de la racine ayant le plus de simulations
     Noeud * noeudMeilleurCoup = racine->enfants[0];
@@ -466,7 +469,7 @@ Coup * trouverMeilleurCoup(Noeud * racine) {
         }
     }
 
-    return noeudMeilleurCoup->coup;
+    return noeudMeilleurCoup;
 }
 
 // Calcule et joue un coup de l'ordinateur avec MCTS-UCT
@@ -515,9 +518,20 @@ void ordijoue_mcts(Etat * etat, int tempsmax) {
 	} while ( temps < tempsmax );
 
     // On cherche le meilleur coup possible
-    meilleur_coup = trouverMeilleurCoup(racine);
+    Noeud * noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine);
+    meilleur_coup = noeudMeilleurCoup->coup;
 
 	/* fin de l'algorithme  */
+
+    // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
+    // et une estimation de la probabilité de victoire pour l'ordinateur
+    printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
+    if (noeudMeilleurCoup->nb_simus > 0)
+        printf("\nProbabilité de victoire pour l'ordinateur : %0.2f %%\n",
+               (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
+    else
+        printf("\nProbabilité de victoire pour l'ordinateur : inconnue\n");
+
 
 	// Jouer le meilleur premier coup
 	jouerCoup(etat, meilleur_coup);
