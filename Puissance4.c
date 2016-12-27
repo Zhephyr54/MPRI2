@@ -37,7 +37,7 @@
                 0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).
  (par défaut)   1 : (QUESTION 3 :) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.
 *********************************************/
-int optimisation_level = 1;
+int optimisationLevel = 1;
 
 /*** Niveau de verbosité du programme ***
                 0 : aucun affichage autre que la demande de coup et le plateau.
@@ -45,10 +45,13 @@ int optimisation_level = 1;
                     coup et une estimation de la probabilité de victoire pour l’ordinateur.
                 2 : affichage du nombre total de simulations réalisées = nombre d'itérations de l'algorithme.
 ****************************************/
-int verbose_level = 1;
+int verboseLevel = 1;
+
+// Méthode du choix du coup à jouer pour MCTS
+typedef enum { MAX, ROBUSTE } MethodeChoixCoup;
 
 // Critères de fin de partie
-typedef enum {NON, MATCHNUL, ORDI_GAGNE, HUMAIN_GAGNE } FinDePartie;
+typedef enum { NON, MATCHNUL, ORDI_GAGNE, HUMAIN_GAGNE } FinDePartie;
 
 // Definition du type Etat (état/position du jeu)
 typedef struct EtatSt {
@@ -323,7 +326,7 @@ double calculerBValeurNoeud(Noeud * noeud) {
     if (noeud->nb_simus == 0)
         return 0;
 
-    double moyenneRecompense = noeud->sommes_recompenses/noeud->nb_simus;
+    double moyenneRecompense = (double)noeud->sommes_recompenses/noeud->nb_simus;
     // *-1 si le noeud parent est un noeud Min = si le coup joué pour arriver ici a été effectué par l'ordinateur
     if (noeud->parent->joueur == 1)
         moyenneRecompense *= -1;
@@ -507,18 +510,44 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat) {
 }
 
 // Trouve le noeud correspondant au meilleur coup possible
+// en utilisant la méthode spécifié
 // à partir de la racine.
-Noeud * trouverNoeudMeilleurCoup(Noeud * racine) {
+Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode) {
 
-    // Le meilleur coup actuel correspond au noeud fils de la racine ayant le plus de simulations
     Noeud * noeudMeilleurCoup = racine->enfants[0];
-    int maxSimus = noeudMeilleurCoup->nb_simus;
-    int i;
-    for (i = 1 ; i < racine->nb_enfants ; i++) {
-        if (maxSimus < racine->enfants[i]->nb_simus) {
-            noeudMeilleurCoup = racine->enfants[i];
+    int i = 1, maxSimus;
+    double maxValeurs, valeurCourante;
+
+    switch(methode) {   // max simulations
+        case ROBUSTE :
             maxSimus = noeudMeilleurCoup->nb_simus;
-        }
+
+            for (i = 1 ; i < racine->nb_enfants ; i++) {
+                if (maxSimus < racine->enfants[i]->nb_simus) {
+                    noeudMeilleurCoup = racine->enfants[i];
+                    maxSimus = noeudMeilleurCoup->nb_simus;
+                }
+            }
+            break;
+
+        case MAX :      // max valeurs
+            if (noeudMeilleurCoup->nb_simus == 0)
+                maxValeurs = 0;
+            else
+                maxValeurs = (double)noeudMeilleurCoup->sommes_recompenses / noeudMeilleurCoup->nb_simus;
+
+            for (i = 1 ; i < racine->nb_enfants ; i++) {
+                if (racine->enfants[i]->nb_simus == 0)
+                    valeurCourante = 0;
+                else
+                    valeurCourante = (double)racine->enfants[i]->sommes_recompenses / racine->enfants[i]->nb_simus;
+
+                if (maxValeurs < valeurCourante) {
+                    noeudMeilleurCoup = racine->enfants[i];
+                    maxValeurs = valeurCourante;
+                }
+            }
+            break;
     }
 
     return noeudMeilleurCoup;
@@ -526,7 +555,8 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine) {
 
 // Calcule et joue un coup de l'ordinateur avec MCTS-UCT
 // en tempsmax secondes
-void ordijoue_mcts(Etat * etat, double tempsmax) {
+// et en choisissant le coup à l'aide de la méthode methodeChoix.
+void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix) {
 	clock_t tic, toc;
 	tic = clock();
 	double temps;
@@ -557,7 +587,7 @@ void ordijoue_mcts(Etat * etat, double tempsmax) {
         enfant = expansionNoeud(noeudSelectionne);
         // Simulation
         Etat * etatCopie = copieEtat(enfant->etat);
-        bool choisirCoupGagnant = optimisation_level >= 1;
+        bool choisirCoupGagnant = optimisationLevel >= 1;
         FinDePartie resultat = simulerPartie(etatCopie, choisirCoupGagnant);
         free(etatCopie);
         // Propagation
@@ -569,17 +599,17 @@ void ordijoue_mcts(Etat * etat, double tempsmax) {
 	} while ( temps < tempsmax );
 
     // On cherche le meilleur coup possible
-    Noeud * noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine);
+    Noeud * noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine, methodeChoix);
     meilleur_coup = noeudMeilleurCoup->coup;
 
 	/* fin de l'algorithme  */
 
-    if (verbose_level >= 2) {
+    if (verboseLevel >= 2) {
         // Affichage du nombre total de simulations / itérations
         printf("\nNombre total de simulations/itérations : %d", iter);
     }
 
-    if (verbose_level >= 1) {
+    if (verboseLevel >= 1) {
         // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
         // et une estimation de la probabilité de victoire pour l'ordinateur
         printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
@@ -639,12 +669,19 @@ int main(int argc, char **argv) {
     /* Gestion des arguments */
 
     // Valeurs par défaut
+    // temps : 5s
+    // méthode : robuste
     double temps = 5;  // temps de calcul pour un coup avec MCTS (en secondes)
+    MethodeChoixCoup methodeChoix = ROBUSTE; // méthode du choix du meilleur coup à la fin de MCTS
     bool printHelp = false;
+    int robustFlag = 0, maxFlag = 0;
 
     // Spécification des options
     static struct option long_options[] = {
         {"help", no_argument, 0, 'h'},
+        {"max", no_argument, 0, 'm'},
+        {"robuste", no_argument, 0, 'r'},
+        {"robust", no_argument, 0, 'r'},
         {"temps", required_argument, 0, 't'},
         {"time", required_argument, 0, 't'},
         {"optimisation", required_argument, 0, 'o'},
@@ -657,7 +694,7 @@ int main(int argc, char **argv) {
     opterr = 0;
     int opt = 0;
 
-    while ( (opt = getopt_long (argc, argv, "ht:o:v:", long_options, &option_index)) != -1) {
+    while ( (opt = getopt_long (argc, argv, "hmrt:o:v:", long_options, &option_index)) != -1) {
         int intResult = 0;
         double doubleResult = 0;
 
@@ -677,9 +714,31 @@ int main(int argc, char **argv) {
                 }
                 break;
 
+            case 'm' :
+                if (robustFlag) {   // Si le choix de robuste a déjà été fait
+                    fprintf(stderr, "Conflit d'arguments : -%c.\n", optopt);
+                    fprintf(stderr, "Les options -r et -m ne peuvent être utilisées en même temps.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                    maxFlag = 1;
+                    methodeChoix = MAX;
+                break;
+
+            case 'r' :
+                if (maxFlag) {   // Si le choix de max a déjà été fait
+                    fprintf(stderr, "Conflit d'arguments : -%c.\n", optopt);
+                    fprintf(stderr, "Les options -r et -m ne peuvent être utilisées en même temps.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                    robustFlag = 1;
+                    methodeChoix = ROBUSTE;
+                break;
+
             case 'o' :
                 if (convertStringToInt(optarg, &intResult) && intResult >= 0)
-                    optimisation_level = intResult;
+                    optimisationLevel = intResult;
                 else {
                     fprintf(stderr, "Argument incorrect : %s.\n", optarg);
                     fprintf(stderr, "L'option -o requiert un nombre entier positif ou nul en argument.\n");
@@ -690,7 +749,7 @@ int main(int argc, char **argv) {
 
             case 'v' :
                 if (convertStringToInt(optarg, &intResult) && intResult >= 0)
-                    verbose_level = intResult;
+                    verboseLevel = intResult;
                 else {
                     fprintf(stderr, "Argument incorrect : %s.\n", optarg);
                     fprintf(stderr, "L'option -v requiert un nombre entier positif ou nul en argument.\n");
@@ -714,8 +773,9 @@ int main(int argc, char **argv) {
     }
 
     if (printHelp) {
-        printf( "\nutilisation : Puissance4 [options]"
-                "\n\nAvec les options suivantes :"
+        printf( "\nutilisation : Puissance4 [options] [methode]"
+                "\n\noptions :"
+
                 "\n\n-t arg (ou --temps ou --time) avec arg étant un nombre décimal positif non nul (par exemple 1.5)."
                 "\nPermet de définir la limite de temps imposée à l'ordinateur pour l'exécution de l'algorithme MCTS."
 
@@ -729,6 +789,12 @@ int main(int argc, char **argv) {
                 "\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu."
                 "\n(par défaut) 1 : (Question 1) affichage à chaque coup de l’ordinateur du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur."
                 "\n             2 : affichage du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme."
+
+                "\n\nmethode : {-r (ou --robuste ou --robust) | -m (ou --max) } :"
+
+                "\n\nPermet de définir la méthode pour choisir le coup à jouer à la fin de l'algorithme MCTS :"
+                "\n(par défaut) -r pour robuste."
+                "\n             -m pour max."
                 "\n\n");
         return 0;
     }
@@ -766,7 +832,7 @@ int main(int argc, char **argv) {
 		else {
 			// tour de l'Ordinateur
 
-			ordijoue_mcts(etat, temps);
+			ordijoue_mcts(etat, temps, methodeChoix);
 
 		}
 
