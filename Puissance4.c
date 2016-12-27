@@ -714,23 +714,22 @@ int main(int argc, char **argv) {
     }
 
     if (printHelp) {
-        printf("\nutilisation : Puissance4 [options]");
-        printf("\n\nAvec les options suivantes :");
+        printf( "\nutilisation : Puissance4 [options]"
+                "\n\nAvec les options suivantes :"
+                "\n\n-t arg (ou --temps ou --time) avec arg étant un nombre décimal positif non nul (par exemple 1.5)."
+                "\nPermet de définir la limite de temps imposée à l'ordinateur pour l'exécution de l'algorithme MCTS."
 
-        printf("\n\n-t arg (ou --temps ou --time) avec arg étant un nombre décimal positif non nul (par exemple 1.5).");
-        printf("\nPermet de définir la limite de temps imposée à l'ordinateur pour l'exécution de l'algorithme MCTS.");
+                "\n\n-o arg (ou --optimisation ou --optimization) avec arg étant un nombre entier positif non nul."
+                "\nPermet de définir le niveau d'optimisation/amélioration de l'algorithme MCTS, c'est-à-dire :"
+                "\n             0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT)."
+                "\n(par défaut) 1 : (Question 3) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible."
 
-        printf("\n\n-o arg (ou --optimisation ou --optimization) avec arg étant un nombre entier positif non nul.");
-        printf("\nPermet de définir le niveau d'optimisation/amélioration de l'algorithme MCTS, c'est-à-dire :");
-        printf("\n             0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).");
-        printf("\n(par défaut) 1 : (Question 3) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.");
-
-        printf("\n\n-v arg (ou --verbose) avec arg étant un nombre entier positif non nul.");
-        printf("\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :");
-        printf("\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu.");
-        printf("\n(par défaut) 1 : (Question 1) affichage à chaque coup de l’ordinateur du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur.");
-        printf("\n             2 : affichage du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme.");
-        printf("\n\n");
+                "\n\n-v arg (ou --verbose) avec arg étant un nombre entier positif non nul."
+                "\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :"
+                "\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu."
+                "\n(par défaut) 1 : (Question 1) affichage à chaque coup de l’ordinateur du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur."
+                "\n             2 : affichage du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme."
+                "\n\n");
         return 0;
     }
 
