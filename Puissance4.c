@@ -1,5 +1,5 @@
 /*
-	Canvas pour algorithmes de jeux à 2 joueurs
+	Canvas pour algorithmes de jeux Ã  2 joueurs
 
 	joueur 0 : humain
 	joueur 1 : ordinateur
@@ -10,18 +10,20 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
+#include <getopt.h>
+#include <ctype.h>
+#include <limits.h>
+#include <errno.h>
 
-// Paramètres du jeu
+// ParamÃ¨tres du jeu
 #define LARGEUR_MAX 7 		// nb max de fils pour un noeud (= nb max de coups possibles)
 
-#define TEMPS 5		// temps de calcul pour un coup avec MCTS (en secondes)
-
-// Constantes/paramètres Algo MCTS
+// Constantes/paramÃ¨tres Algo MCTS
 #define RECOMPENSE_ORDI_GAGNE 1
 #define RECOMPENSE_MATCHNUL 0.5
 #define RECOMPENSE_HUMAIN_GAGNE 0
 
-#define CONSTANTE_C 1.4142  // ~ Racine carré de 2
+#define CONSTANTE_C 1.4142  // ~ Racine carrÃ© de 2
 
 // macros
 #define AUTRE_JOUEUR(i) (1-(i))
@@ -30,13 +32,28 @@
 
 #define ARRAY_LENGTH(x)  (sizeof(x) / sizeof((x)[0]))
 
-// Critères de fin de partie
+// Variables globales avec leurs valeurs par dÃ©faut
+/*** Niveau d'optimisation de l'algorithme ***
+                0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).
+ (par dÃ©faut)   1 : (QUESTION 3 :) amÃ©lioration des simulations consistant Ã  toujours choisir un coup gagnant lorsque cela est possible.
+*********************************************/
+int optimisation_level = 1;
+
+/*** Niveau de verbositÃ© du programme ***
+                0 : aucun affichage autre que la demande de coup et le plateau.
+ (par dÃ©faut)   1 : (QUESTION 1:) affichage Ã  chaque coup de lâ€™ordinateur du nombre de simulations rÃ©alisÃ©es pour calculer ce
+                    coup et une estimation de la probabilitÃ© de victoire pour lâ€™ordinateur.
+                2 : affichage du nombre total de simulations rÃ©alisÃ©es = nombre d'itÃ©rations de l'algorithme.
+****************************************/
+int verbose_level = 1;
+
+// CritÃ¨res de fin de partie
 typedef enum {NON, MATCHNUL, ORDI_GAGNE, HUMAIN_GAGNE } FinDePartie;
 
-// Definition du type Etat (état/position du jeu)
+// Definition du type Etat (Ã©tat/position du jeu)
 typedef struct EtatSt {
 
-	int joueur; // à qui de jouer ?
+	int joueur; // Ã  qui de jouer ?
 
 	// 6 lignes et 7 colonnes au Puissance 4
 	char plateau[6][7];
@@ -46,12 +63,12 @@ typedef struct EtatSt {
 // Definition du type Coup
 typedef struct {
 
-    // un coup de Puissance 4 est simplement défini par sa colonne
+    // un coup de Puissance 4 est simplement dÃ©fini par sa colonne
 	int colonne;
 
 } Coup;
 
-// Copier un état
+// Copier un Ã©tat
 Etat * copieEtat( Etat * src ) {
 	Etat * etat = (Etat *)malloc(sizeof(Etat));
 
@@ -100,7 +117,6 @@ void afficheJeu(Etat * etat) {
 
 
 // Nouveau coup
-// TODO: adapter la liste de paramètres au jeu
 Coup * nouveauCoup( int col ) {
 	Coup * coup = (Coup *)malloc(sizeof(Coup));
 
@@ -109,27 +125,31 @@ Coup * nouveauCoup( int col ) {
 	return coup;
 }
 
-// Demander à l'humain quel coup jouer
+// Demander Ã  l'humain quel coup jouer
+// Retourne NULL en cas d'input incorrect
 Coup * demanderCoup () {
-	int col;
+	int col = -1;
+	char c;
 	printf(" quelle colonne ? ") ;
-	scanf("%d",&col);
+	if ( (scanf("%d%c", &col, &c)!=2 || c!='\n') && clean_stdin() )
+        return NULL;
 
 	return nouveauCoup(col);
 }
 
-// Modifier l'état en jouant un coup
+// Modifier l'Ã©tat en jouant un coup
 // retourne 0 si le coup n'est pas possible
 int jouerCoup( Etat * etat, Coup * coup ) {
 
-		// le coup est impossible si la colonne est rempli (donc première ligne occupé)
-	// ou si il est en dehors des limites
-	if ( etat->plateau[0][coup->colonne] != ' ' || coup->colonne < 0 || coup->colonne >= ARRAY_LENGTH(etat->plateau[0]) )
+    // le coup est impossible si il est en dehors des limites
+    // ou si la colonne est rempli (donc premiÃ¨re ligne occupÃ©)
+	if ( coup->colonne < 0 || coup->colonne >= ARRAY_LENGTH(etat->plateau[0]) ||
+     etat->plateau[0][coup->colonne] != ' ')
 		return 0;
 
-    // on cherche la ligne sur laquelle le pion doit être placé
+    // on cherche la ligne sur laquelle le pion doit Ãªtre placÃ©
     int ligneJouee = -1;
-    int row = ARRAY_LENGTH(etat->plateau) - 1; // on part d'en bas du plateau (dernière ligne donc)
+    int row = ARRAY_LENGTH(etat->plateau) - 1; // on part d'en bas du plateau (derniÃ¨re ligne donc)
     while (row >=0 && ligneJouee == -1) {
         if (etat->plateau[row][coup->colonne] == ' ') // si l'emplacement est libre
             ligneJouee = row;
@@ -143,13 +163,13 @@ int jouerCoup( Etat * etat, Coup * coup ) {
 
     etat->plateau[ligneJouee][coup->colonne] = etat->joueur ? 'O' : 'X';
 
-    // à l'autre joueur de jouer
+    // Ã  l'autre joueur de jouer
     etat->joueur = AUTRE_JOUEUR(etat->joueur);
 
     return 1;
 }
 
-// Retourne une liste de coups possibles à partir d'un etat
+// Retourne une liste de coups possibles Ã  partir d'un etat
 // (tableau de pointeurs de coups se terminant par NULL)
 Coup ** coups_possibles( Etat * etat ) {
 
@@ -160,7 +180,7 @@ Coup ** coups_possibles( Etat * etat ) {
 	int column;
 	// on parcourt les colonnes
 	for(column=0; column < ARRAY_LENGTH(etat->plateau[0]); column++) {
-        // on vérifie que la colonne courante n'est pas remplie (donc première ligne non occupé)
+        // on vÃ©rifie que la colonne courante n'est pas remplie (donc premiÃ¨re ligne non occupÃ©)
         if ( etat->plateau[0][column] == ' ' ) {
             coups[k] = nouveauCoup(column);
             k++;
@@ -176,14 +196,14 @@ Coup ** coups_possibles( Etat * etat ) {
 // Definition du type Noeud
 typedef struct NoeudSt {
 
-	int joueur; // joueur qui a joué pour arriver ici
-	Coup * coup;   // coup joué par ce joueur pour arriver ici
+	int joueur; // joueur qui a jouÃ© pour arriver ici
+	Coup * coup;   // coup jouÃ© par ce joueur pour arriver ici
 
 	Etat * etat; // etat du jeu
 
 	struct NoeudSt * parent;
-	struct NoeudSt * enfants[LARGEUR_MAX]; // liste d'enfants : chaque enfant correspond à un coup possible
-	int nb_enfants;	// nb d'enfants présents dans la liste
+	struct NoeudSt * enfants[LARGEUR_MAX]; // liste d'enfants : chaque enfant correspond Ã  un coup possible
+	int nb_enfants;	// nb d'enfants prÃ©sents dans la liste
 
 	// POUR MCTS:
 	int nb_victoires;   // Pour calculer les stats
@@ -193,8 +213,8 @@ typedef struct NoeudSt {
 } Noeud;
 
 
-// Créer un nouveau noeud en jouant un coup à partir d'un parent
-// utiliser nouveauNoeud(NULL, NULL) pour créer la racine
+// CrÃ©er un nouveau noeud en jouant un coup Ã  partir d'un parent
+// utiliser nouveauNoeud(NULL, NULL) pour crÃ©er la racine
 Noeud * nouveauNoeud (Noeud * parent, Coup * coup ) {
 	Noeud * noeud = (Noeud *)malloc(sizeof(Noeud));
 
@@ -221,8 +241,8 @@ Noeud * nouveauNoeud (Noeud * parent, Coup * coup ) {
 	return noeud;
 }
 
-// Ajouter un enfant à un parent en jouant un coup
-// retourne le pointeur sur l'enfant ajouté
+// Ajouter un enfant Ã  un parent en jouant un coup
+// retourne le pointeur sur l'enfant ajoutÃ©
 Noeud * ajouterEnfant(Noeud * parent, Coup * coup) {
 	Noeud * enfant = nouveauNoeud (parent, coup ) ;
 	parent->enfants[parent->nb_enfants] = enfant;
@@ -245,19 +265,19 @@ void freeNoeud ( Noeud * noeud) {
 }
 
 
-// Test si l'état est un état terminal
+// Test si l'Ã©tat est un Ã©tat terminal
 // et retourne NON, MATCHNUL, ORDI_GAGNE ou HUMAIN_GAGNE
 FinDePartie testFin( Etat * etat ) {
 
     int largeurPlateau = ARRAY_LENGTH(etat->plateau);
     int hauteurPlateau = ARRAY_LENGTH(etat->plateau[0]);
 
-	// tester si un joueur a gagné
+	// tester si un joueur a gagnÃ©
 	int i, j, k, n = 0;
 	for (i=0; i < largeurPlateau; i++) {
 		for(j=0; j < hauteurPlateau; j++) {
 			if ( etat->plateau[i][j] != ' ') {
-				n++;	// nb coups joués
+				n++;	// nb coups jouÃ©s
 
 				// lignes
 				k=0;
@@ -296,28 +316,30 @@ FinDePartie testFin( Etat * etat ) {
 	return NON;
 }
 
+/* Fonctions utilisÃ©es pour l'implÃ©mentation de l'algorithme MCTS */
+
 // Calcule la B-valeur d'un noeud
 double calculerBValeurNoeud(Noeud * noeud) {
     if (noeud->nb_simus == 0)
         return 0;
 
     double moyenneRecompense = noeud->sommes_recompenses/noeud->nb_simus;
-    // *-1 si le noeud parent est un noeud Min = si le coup joué pour arriver ici a été effectué par l'ordinateur
+    // *-1 si le noeud parent est un noeud Min = si le coup jouÃ© pour arriver ici a Ã©tÃ© effectuÃ© par l'ordinateur
     if (noeud->parent->joueur == 1)
         moyenneRecompense *= -1;
 
     return moyenneRecompense + CONSTANTE_C * sqrt( log(noeud->parent->nb_simus / noeud->nb_simus) );
 }
 
-// Sélectionne récursivement à partir de la racine (passée en paramètre)
-// le noeud avec la plus grande B-valeur jusqu'à arriver à un noeud terminal
-// ou un dont tous les fils n'ont pas été développés
+// SÃ©lectionne rÃ©cursivement Ã  partir de la racine (passÃ©e en paramÃ¨tre)
+// le noeud avec la plus grande B-valeur jusqu'Ã  arriver Ã  un noeud terminal
+// ou un dont tous les fils n'ont pas Ã©tÃ© dÃ©veloppÃ©s
 Noeud * selectionUCB(Noeud * racine) {
     Noeud * noeudCourant = racine;
     Coup ** coups;
     int i, k = 0;
 
-    // Si on arrive à une feuille, on retourne celle-ci
+    // Si on arrive Ã  une feuille, on retourne celle-ci
     if (noeudCourant->nb_enfants == 0)
         return noeudCourant;
 
@@ -327,18 +349,18 @@ Noeud * selectionUCB(Noeud * racine) {
         k++;
     }
     free(coups);
-    // Si les fils du noeud courant n'ont pas tous été développés,
+    // Si les fils du noeud courant n'ont pas tous Ã©tÃ© dÃ©veloppÃ©s,
     // on retourne ce noeud
     if (noeudCourant->nb_enfants != k)
         return noeudCourant;
 
     // Si un des fils du noeud n'a aucun fils
-    // alors on le sélectionne
+    // alors on le sÃ©lectionne
     for (i = 0; i < noeudCourant->nb_enfants ; i++)
         if(noeudCourant->enfants[i]->nb_enfants == 0)
             return noeudCourant->enfants[i];
 
-    // On sélectionne le fils possédant la B-valeur maximale
+    // On sÃ©lectionne le fils possÃ©dant la B-valeur maximale
     Noeud * noeudMaxBValeur = noeudCourant->enfants[0];
     double maxBValeur = calculerBValeurNoeud(noeudMaxBValeur);
     for (i = 1 ; i < noeudCourant->nb_enfants ; i++) {
@@ -348,20 +370,20 @@ Noeud * selectionUCB(Noeud * racine) {
             maxBValeur = bValeurCourante;
         }
     }
-    // Appel récursif sur le fils possédant la B-valeur maximale
+    // Appel rÃ©cursif sur le fils possÃ©dant la B-valeur maximale
     return selectionUCB(noeudMaxBValeur);
 }
 
-// Réalise l'expansion d'un noeud en développant un de ses fils au hasard
+// RÃ©alise l'expansion d'un noeud en dÃ©veloppant un de ses fils au hasard
 // et retourne ce fils.
-// Si le noeud représente un état final, retourne simplement celui-ci.
+// Si le noeud reprÃ©sente un Ã©tat final, retourne simplement celui-ci.
 Noeud * expansionNoeud(Noeud * noeud) {
-    if (testFin(noeud->etat) != NON)    // Si le noeud représente un état final
-        return noeud;                   // on ne le développe pas
+    if (testFin(noeud->etat) != NON)    // Si le noeud reprÃ©sente un Ã©tat final
+        return noeud;                   // on ne le dÃ©veloppe pas
 
     Coup ** coups = coups_possibles(noeud->etat);
 
-    // On enlève les coups correspondant aux fils existants du noeud
+    // On enlÃ¨ve les coups correspondant aux fils existants du noeud
     int k = 0;
     while (coups[k] != NULL) {
 
@@ -370,15 +392,15 @@ Noeud * expansionNoeud(Noeud * noeud) {
         // Pour chaque fils
         int i;
         for (i = 0 ; i < noeud->nb_enfants ; i++) {
-            // Si il s'agit du même coup
+            // Si il s'agit du mÃªme coup
             if (coups[k]->colonne == noeud->enfants[i]->coup->colonne) {
-                coupDejaDev = true; // ce coup a déjà un fils correspondant
-                break;              // on arrête le parcours des fils
+                coupDejaDev = true; // ce coup a dÃ©jÃ  un fils correspondant
+                break;              // on arrÃªte le parcours des fils
             }
         }
 
-        if (coupDejaDev) {  // si ce coup a déjà un fils correspondant
-            // On supprime ce coup et on décale la liste de coups
+        if (coupDejaDev) {  // si ce coup a dÃ©jÃ  un fils correspondant
+            // On supprime ce coup et on dÃ©cale la liste de coups
             free(coups[k]);
             int j = k;
             while (coups[j] != NULL) {
@@ -391,29 +413,29 @@ Noeud * expansionNoeud(Noeud * noeud) {
 
     }
 
-    // On développe un fils au hasard
+    // On dÃ©veloppe un fils au hasard
     int choix = rand() % k;
 
-    // On libère la mémoire des coups inutilisés
+    // On libÃ¨re la mÃ©moire des coups inutilisÃ©s
     k = 0;
     while (coups[k] != NULL) {
         if (k != choix)
-            free(coups[k]); // sauf celle du coup joué qui sera libérée dans freenoeud
+            free(coups[k]); // sauf celle du coup jouÃ© qui sera libÃ©rÃ©e dans freenoeud
         k++;
     }
 
     Noeud * enfant = ajouterEnfant(noeud, coups[choix]);
-    free(coups);    // On libère la mémoire de la liste de coups
+    free(coups);    // On libÃ¨re la mÃ©moire de la liste de coups
     return enfant;
 }
 
-// Simule le déroulement de la partie à partir d'un état
-// jusqu'à la fin et retourne l'état final.
-// Si choisirCoupGagnant est à vrai,
-// on améliore les simulations en choisissant un coup gagnant lorsque cela est possible.
+// Simule le dÃ©roulement de la partie Ã  partir d'un Ã©tat
+// jusqu'Ã  la fin et retourne l'Ã©tat final.
+// Si choisirCoupGagnant est Ã  vrai,
+// on amÃ©liore les simulations en choisissant un coup gagnant lorsque cela est possible.
 FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
     FinDePartie resultatFinDePartie;
-    // Tant que la partie n'est pas terminée
+    // Tant que la partie n'est pas terminÃ©e
     while ((resultatFinDePartie = testFin(etat)) == NON) {
         Coup** coups = coups_possibles(etat);
         Coup* coupAJoue = NULL;
@@ -435,18 +457,18 @@ FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
             }
             // Si aucun coup gagnant n'est possible
             if (coupAJoue == NULL)
-                coupAJoue = coups[rand() % k];  // On joue un coup aléatoirement
+                coupAJoue = coups[rand() % k];  // On joue un coup alÃ©atoirement
         }
-        // Sinon, on choisit le coup aléatoirement
+        // Sinon, on choisit le coup alÃ©atoirement
         else {
             int k = 0;
             while (coups[k] != NULL)    k++;
-            coupAJoue = coups[rand() % k];  // On joue un coup aléatoirement
+            coupAJoue = coups[rand() % k];  // On joue un coup alÃ©atoirement
         }
 
         jouerCoup(etat, coupAJoue);  // On joue le coup
 
-        // On libère la mémoire
+        // On libÃ¨re la mÃ©moire
         int k = 0;
         while (coups[k] != NULL) {
             free(coups[k]);
@@ -458,8 +480,8 @@ FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
     return resultatFinDePartie;
 }
 
-// Propage le résultat à partir d'un noeud
-// en remontant le résultat de la partie
+// Propage le rÃ©sultat Ã  partir d'un noeud
+// en remontant le rÃ©sultat de la partie
 // aux parents de ce noeud.
 void propagerResultat(Noeud * noeud, FinDePartie resultat) {
 
@@ -476,6 +498,8 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat) {
             case MATCHNUL :
                 noeud->sommes_recompenses += RECOMPENSE_MATCHNUL;
                 break;
+            default:
+                break;
         }
         noeud = noeud->parent;
     }
@@ -483,7 +507,7 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat) {
 }
 
 // Trouve le noeud correspondant au meilleur coup possible
-// à partir de la racine.
+// Ã  partir de la racine.
 Noeud * trouverNoeudMeilleurCoup(Noeud * racine) {
 
     // Le meilleur coup actuel correspond au noeud fils de la racine ayant le plus de simulations
@@ -502,20 +526,19 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine) {
 
 // Calcule et joue un coup de l'ordinateur avec MCTS-UCT
 // en tempsmax secondes
-void ordijoue_mcts(Etat * etat, int tempsmax) {
-
+void ordijoue_mcts(Etat * etat, double tempsmax) {
 	clock_t tic, toc;
 	tic = clock();
-	int temps;
+	double temps;
 
 	Coup ** coups;
 	Coup * meilleur_coup ;
 
-	// Créer l'arbre de recherche
+	// CrÃ©er l'arbre de recherche
 	Noeud * racine = nouveauNoeud(NULL, NULL);
 	racine->etat = copieEtat(etat);
 
-	// créer les premiers noeuds:
+	// crÃ©er les premiers noeuds:
 	coups = coups_possibles(racine->etat);
 	int k = 0;
 	Noeud * enfant;
@@ -528,21 +551,21 @@ void ordijoue_mcts(Etat * etat, int tempsmax) {
 	int iter = 0;
 
 	do {
-        // Sélection
+        // SÃ©lection
         Noeud * noeudSelectionne = selectionUCB(racine);
         // Expansion
         enfant = expansionNoeud(noeudSelectionne);
         // Simulation
         Etat * etatCopie = copieEtat(enfant->etat);
-        FinDePartie resultat = simulerPartie(etatCopie, true);
+        bool choisirCoupGagnant = optimisation_level >= 1;
+        FinDePartie resultat = simulerPartie(etatCopie, choisirCoupGagnant);
         free(etatCopie);
         // Propagation
         propagerResultat(enfant, resultat);
 
 		toc = clock();
-		temps = (int)( ((double) (toc - tic)) / CLOCKS_PER_SEC );
+		temps = ((double) (toc - tic))/ CLOCKS_PER_SEC;
 		iter ++;
-
 	} while ( temps < tempsmax );
 
     // On cherche le meilleur coup possible
@@ -551,38 +574,177 @@ void ordijoue_mcts(Etat * etat, int tempsmax) {
 
 	/* fin de l'algorithme  */
 
-    // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
-    // et une estimation de la probabilité de victoire pour l'ordinateur
-    printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
-    printf("\nEstimation de probabilité de victoire pour l'ordinateur : ");
-    if (noeudMeilleurCoup->nb_simus > 0)
-        printf("%0.2f %%", (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
-    else
-        printf("inconnue");
-    printf("\n");
+    if (verbose_level >= 2) {
+        // Affichage du nombre total de simulations / itÃ©rations
+        printf("\nNombre total de simulations/itÃ©rations : %d", iter);
+    }
 
+    if (verbose_level >= 1) {
+        // Affichage du nombre de simulations rÃ©alisÃ©es pour calculer le meilleur coup
+        // et une estimation de la probabilitÃ© de victoire pour l'ordinateur
+        printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
+        printf("\nEstimation de probabilitÃ© de victoire pour l'ordinateur : ");
+        if (noeudMeilleurCoup->nb_simus > 0)
+            printf("%0.2f %%", (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
+        else
+            printf("inconnue");
+        printf("\n");
+    }
 
 	// Jouer le meilleur premier coup
 	jouerCoup(etat, meilleur_coup);
 
-	// Penser à libérer la mémoire :
+	// Penser Ã  libÃ©rer la mÃ©moire :
 	freeNoeud(racine);
 	free (coups);
 }
 
-int main(void) {
+/* Fonctions "utilitaires" */
 
-	Coup * coup;
+// Convertit un string (char*) en entier et stocke le rÃ©sultat dans result.
+// Retourne true si la conversion s'est dÃ©roulÃ©e correctement, false sinon.
+bool convertStringToInt(char * string, int * result) {
+    char * end = NULL;
+    errno = 0;
+    long temp = strtol(string, &end, 10);
+
+    if (*end == '\0' && errno != ERANGE && temp >= INT_MIN && temp <= INT_MAX) {
+        *result = (int)temp;
+        return true;
+    }
+    return false;
+}
+
+// Convertit un string (char*) en double et stocke le rÃ©sultat dans result.
+// Retourne true si la conversion s'est dÃ©roulÃ©e correctement, false sinon.
+bool convertStringToDouble(char * string, double * result) {
+    char * end = NULL;
+    errno = 0;
+    double temp = strtod(string, &end);
+
+    if (*end == '\0' && errno != ERANGE) {
+        *result = temp;
+        return true;
+    }
+    return false;
+}
+
+int clean_stdin() {
+    while (getchar()!='\n');
+    return 1;
+}
+
+int main(int argc, char **argv) {
+
+    /* Gestion des arguments */
+
+    // Valeurs par dÃ©faut
+    double temps = 5;  // temps de calcul pour un coup avec MCTS (en secondes)
+    bool printHelp = false;
+
+    // SpÃ©cification des options
+    static struct option long_options[] = {
+        {"help", no_argument, 0, 'h'},
+        {"temps", required_argument, 0, 't'},
+        {"time", required_argument, 0, 't'},
+        {"optimisation", required_argument, 0, 'o'},
+        {"optimization", required_argument, 0, 'o'},
+        {"verbose", required_argument, 0, 'v'},
+        {0, 0, 0, 0}
+    };
+
+    int option_index = 0;
+    opterr = 0;
+    int opt = 0;
+
+    while ( (opt = getopt_long (argc, argv, "ht:o:v:", long_options, &option_index)) != -1) {
+        int intResult = 0;
+        double doubleResult = 0;
+
+        switch (opt) {
+            case 'h' :
+                printHelp = true;
+                break;
+
+            case 't' :
+                if (convertStringToDouble(optarg, &doubleResult) && doubleResult > 0)
+                    temps = doubleResult;
+                else {
+                    fprintf(stderr, "Argument incorrect : %s.\n", optarg);
+                    fprintf(stderr, "L'option -t requiert un nombre dÃ©cimal (1.5 par exemple) positif non nul en argument.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                break;
+
+            case 'o' :
+                if (convertStringToInt(optarg, &intResult) && intResult >= 0)
+                    optimisation_level = intResult;
+                else {
+                    fprintf(stderr, "Argument incorrect : %s.\n", optarg);
+                    fprintf(stderr, "L'option -o requiert un nombre entier positif ou nul en argument.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                break;
+
+            case 'v' :
+                if (convertStringToInt(optarg, &intResult) && intResult >= 0)
+                    verbose_level = intResult;
+                else {
+                    fprintf(stderr, "Argument incorrect : %s.\n", optarg);
+                    fprintf(stderr, "L'option -v requiert un nombre entier positif ou nul en argument.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                break;
+
+            case '?':
+                // Argument requis
+                if (optopt == 't' || optopt == 'o' || optopt == 'v')
+                    fprintf(stderr, "Argument requis pour l'option -%c.\n", optopt);
+                else if(isprint(optopt))
+                    fprintf (stderr, "Option inconnu : `-%c'.\n", optopt);
+                else
+                    fprintf (stderr, "Option inconnu : `\\x%x'.\n", optopt);
+
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                return 1;
+        }
+    }
+
+    if (printHelp) {
+        printf("\nutilisation : Puissance4 [options]");
+        printf("\n\nAvec les options suivantes :");
+
+        printf("\n\n-t arg (ou --temps ou --time) avec arg Ã©tant un nombre dÃ©cimal positif non nul (par exemple 1.5).");
+        printf("\nPermet de dÃ©finir la limite de temps imposÃ©e Ã  l'ordinateur pour l'exÃ©cution de l'algorithme MCTS.");
+
+        printf("\n\n-o arg (ou --optimisation ou --optimization) avec arg Ã©tant un nombre entier positif non nul.");
+        printf("\nPermet de dÃ©finir le niveau d'optimisation/amÃ©lioration de l'algorithme MCTS, c'est-Ã -dire :");
+        printf("\n             0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).");
+        printf("\n(par dÃ©faut) 1 : (Question 3) amÃ©lioration des simulations consistant Ã  toujours choisir un coup gagnant lorsque cela est possible.");
+
+        printf("\n\n-v arg (ou --verbose) avec arg Ã©tant un nombre entier positif non nul.");
+        printf("\nPermet de dÃ©finir le niveau de verbositÃ© du programme, c'est-Ã -dire :");
+        printf("\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu.");
+        printf("\n(par dÃ©faut) 1 : (Question 1) affichage Ã  chaque coup de lâ€™ordinateur du nombre de simulations rÃ©alisÃ©es pour calculer ce coup et une estimation de la probabilitÃ© de victoire pour lâ€™ordinateur.");
+        printf("\n             2 : affichage du nombre total de simulations rÃ©alisÃ©es, ce qui correspond Ã©galement au nombre d'itÃ©rations de l'algorithme.");
+        printf("\n\n");
+        return 0;
+    }
+
+	Coup * coup = NULL;
 	FinDePartie fin;
 
 	// initialisation
 	Etat * etat = etat_initial();
 
+    char c;
 	// Choisir qui commence :
     do {
         printf("Qui commence (0 : humain, 1 : ordinateur) ? ");
-        scanf("%d", &(etat->joueur) );
-    } while (etat->joueur != 0 && etat->joueur != 1);
+    } while ( ( (scanf("%d%c", &(etat->joueur), &c)!=2 || c!='\n' ) && clean_stdin()) || (etat->joueur != 0 && etat->joueur != 1) );
 
 	// boucle de jeu
 	do {
@@ -592,15 +754,20 @@ int main(void) {
 		if ( etat->joueur == 0 ) {
 			// tour de l'humain
 
+            int coupPossible = 0;
 			do {
 				coup = demanderCoup();
-			} while ( !jouerCoup(etat, coup) );
-            free(coup);
+                if (coup != NULL) {
+                    coupPossible = jouerCoup(etat, coup);
+                    free(coup);
+                }
+			} while ( !coupPossible);
+
 		}
 		else {
 			// tour de l'Ordinateur
 
-			ordijoue_mcts( etat, TEMPS );
+			ordijoue_mcts(etat, temps);
 
 		}
 
@@ -611,7 +778,7 @@ int main(void) {
 	afficheJeu(etat);
 
 	if ( fin == ORDI_GAGNE )
-		printf( "** L'ordinateur a gagné **\n");
+		printf( "** L'ordinateur a gagnÃ© **\n");
 	else if ( fin == MATCHNUL )
 		printf(" Match nul !  \n");
 	else
