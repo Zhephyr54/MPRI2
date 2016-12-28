@@ -1,4 +1,4 @@
-#include "Mcts.h"
+#include "mcts.h"
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,4 +1,4 @@
-#include "Puissance4.h"
+#include "puissance4.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
