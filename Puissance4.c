@@ -41,9 +41,11 @@ int optimisationLevel = 1;
 
 /*** Niveau de verbosité du programme ***
                 0 : aucun affichage autre que la demande de coup et le plateau.
- (par défaut)   1 : (QUESTION 1:) affichage à chaque coup de l’ordinateur du nombre de simulations réalisées pour calculer ce
+ (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre de simulations réalisées pour calculer ce
                     coup et une estimation de la probabilité de victoire pour l’ordinateur.
-                2 : affichage du nombre total de simulations réalisées = nombre d'itérations de l'algorithme.
+                2 : affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées = nombre d'itérations de l'algorithme.
+                3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
+                4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
 ****************************************/
 int verboseLevel = 1;
 
@@ -604,20 +606,39 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix) 
 
 	/* fin de l'algorithme  */
 
-    if (verboseLevel >= 2) {
-        // Affichage du nombre total de simulations / itérations
+    // Affichage du nombre total de simulations / itérations
+    if (verboseLevel >= 2)
         printf("\nNombre total de simulations/itérations : %d", iter);
+
+    // Affichage du nombre de simulations réalisées pour chaque coup
+    if (verboseLevel >= 3) {
+        printf("\n");
+        int i;
+        for (i=0 ; i < racine->nb_enfants ; i++) {
+            Noeud * noeud = racine->enfants[i];
+            printf("\nPour le coup en colonne %d :   Nombre de simulations   : %d", noeud->coup->colonne, noeud->nb_simus);
+            // et de la récompense moyenne pour chaque coup
+            if (verboseLevel >= 4) {
+                printf("\n                               Moyenne des récompenses : ");
+                if (noeud->nb_simus > 0)
+                    printf("%0.4f", (double)noeud->sommes_recompenses/noeud->nb_simus);
+                else
+                    printf("aucune");
+            }
+        }
+        printf("\n");
     }
 
+    // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
+    // et une estimation de la probabilité de victoire pour l'ordinateur
     if (verboseLevel >= 1) {
-        // Affichage du nombre de simulations réalisées pour calculer le meilleur coup
-        // et une estimation de la probabilité de victoire pour l'ordinateur
-        printf("\nNombre de simulations pour ce coup : %d", noeudMeilleurCoup->nb_simus);
+        printf("\nCoup joué en colonne %d", noeudMeilleurCoup->coup->colonne);
+        printf("\nNombre de simulations pour le coup joué : %d", noeudMeilleurCoup->nb_simus);
         printf("\nEstimation de probabilité de victoire pour l'ordinateur : ");
         if (noeudMeilleurCoup->nb_simus > 0)
             printf("%0.2f %%", (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
         else
-            printf("inconnue");
+            printf("aucune");
         printf("\n");
     }
 
@@ -787,14 +808,16 @@ int main(int argc, char **argv) {
                 "\n\n-v arg (ou --verbose) avec arg étant un nombre entier positif non nul."
                 "\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :"
                 "\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu."
-                "\n(par défaut) 1 : (Question 1) affichage à chaque coup de l’ordinateur du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur."
-                "\n             2 : affichage du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme."
+                "\n(par défaut) 1 : (Question 1) affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur."
+                "\n             2 : affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme."
+                "\n             3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup."
+                "\n             4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup."
 
                 "\n\nmethode : {-r (ou --robuste ou --robust) | -m (ou --max) } :"
 
                 "\n\nPermet de définir la méthode pour choisir le coup à jouer à la fin de l'algorithme MCTS :"
-                "\n(par défaut) -r pour robuste."
-                "\n             -m pour max."
+                "\n(par défaut) -r pour robuste (coup avec le plus grand nombre de simulations)."
+                "\n             -m pour max (coup avec la plus grande moyenne des récompenses)."
                 "\n\n");
         return 0;
     }
