@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+#include <float.h>
 
 // Paramètres du jeu
 #define LARGEUR_MAX 7 		// nb max de fils pour un noeud (= nb max de coups possibles)
@@ -197,6 +198,18 @@ Coup ** coups_possibles( Etat * etat ) {
 	return coups;
 }
 
+// Compte le nombre de coups possibles
+int nombre_coups_possibles(Etat * etat) {
+    int count = 0;
+	int column;
+	// on parcourt les colonnes
+	for(column=0; column < ARRAY_LENGTH(etat->plateau[0]); column++)
+        // on vérifie que la colonne courante n'est pas remplie (donc première ligne non occupé)
+        if ( etat->plateau[0][column] == ' ' )
+            count++;
+
+    return count;
+}
 
 // Definition du type Noeud
 typedef struct NoeudSt {
@@ -325,8 +338,9 @@ FinDePartie testFin( Etat * etat ) {
 
 // Calcule la B-valeur d'un noeud
 double calculerBValeurNoeud(Noeud * noeud) {
+    // Si le noeud n'a aucune simulation, il est prioritaire
     if (noeud->nb_simus == 0)
-        return 0;
+        return DBL_MAX;
 
     double moyenneRecompense = (double)noeud->sommes_recompenses/noeud->nb_simus;
     // *-1 si le noeud parent est un noeud Min = si le coup joué pour arriver ici a été effectué par l'ordinateur
@@ -344,28 +358,11 @@ Noeud * selectionUCB(Noeud * racine) {
     Coup ** coups;
     int i, k = 0;
 
-    // Si on arrive à une feuille, on retourne celle-ci
-    if (noeudCourant->nb_enfants == 0)
+    // Si on arrive à un noeud terminal ou un dont tous les fils n'ont pas été développés
+    if (testFin(noeudCourant->etat) != NON || noeudCourant->nb_enfants != nombre_coups_possibles(noeudCourant->etat))
         return noeudCourant;
 
-    coups = coups_possibles(noeudCourant->etat);
-    while (coups[k] != NULL) {
-        free(coups[k]);
-        k++;
-    }
-    free(coups);
-    // Si les fils du noeud courant n'ont pas tous été développés,
-    // on retourne ce noeud
-    if (noeudCourant->nb_enfants != k)
-        return noeudCourant;
-
-    // Si un des fils du noeud n'a aucun fils
-    // alors on le sélectionne
-    for (i = 0; i < noeudCourant->nb_enfants ; i++)
-        if(noeudCourant->enfants[i]->nb_enfants == 0)
-            return noeudCourant->enfants[i];
-
-    // On sélectionne le fils possédant la B-valeur maximale
+    // Sinon, on sélectionne le fils possédant la B-valeur maximale
     Noeud * noeudMaxBValeur = noeudCourant->enfants[0];
     double maxBValeur = calculerBValeurNoeud(noeudMaxBValeur);
     for (i = 1 ; i < noeudCourant->nb_enfants ; i++) {
