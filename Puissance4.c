@@ -333,7 +333,7 @@ double calculerBValeurNoeud(Noeud * noeud) {
     if (noeud->parent->joueur == 1)
         moyenneRecompense *= -1;
 
-    return moyenneRecompense + CONSTANTE_C * sqrt( log(noeud->parent->nb_simus / noeud->nb_simus) );
+    return moyenneRecompense + CONSTANTE_C * sqrt( log(noeud->parent->nb_simus) / noeud->nb_simus );
 }
 
 // Sélectionne récursivement à partir de la racine (passée en paramètre)
