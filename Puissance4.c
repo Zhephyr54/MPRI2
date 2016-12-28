@@ -616,7 +616,7 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix) 
             printf("\nPour le coup en colonne %d :   Nombre de simulations   : %d", noeud->coup->colonne, noeud->nb_simus);
             // et de la récompense moyenne pour chaque coup
             if (verboseLevel >= 4) {
-            printf("\n                              Moyenne des récompenses : ");
+                printf("\n                              Moyenne des récompenses : ");
                 if (noeud->nb_simus > 0)
                     printf("%0.4f", (double)noeud->sommes_recompenses/noeud->nb_simus);
                 else
