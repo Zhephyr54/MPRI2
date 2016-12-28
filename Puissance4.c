@@ -737,7 +737,7 @@ int main(int argc, char **argv) {
 
             case 'm' :
                 if (robustFlag) {   // Si le choix de robuste a déjà été fait
-                    fprintf(stderr, "Conflit d'arguments : -%c.\n", optopt);
+                    fprintf(stderr, "Conflit d'arguments : -%c.\n", opt);
                     fprintf(stderr, "Les options -r et -m ne peuvent être utilisées en même temps.\n");
                     fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
                     return 1;
@@ -748,7 +748,7 @@ int main(int argc, char **argv) {
 
             case 'r' :
                 if (maxFlag) {   // Si le choix de max a déjà été fait
-                    fprintf(stderr, "Conflit d'arguments : -%c.\n", optopt);
+                    fprintf(stderr, "Conflit d'arguments : -%c.\n", opt);
                     fprintf(stderr, "Les options -r et -m ne peuvent être utilisées en même temps.\n");
                     fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
                     return 1;
