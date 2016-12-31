@@ -12,18 +12,16 @@ int main(int argc, char **argv) {
     /* Gestion des arguments */
 
     /*** Niveau d'optimisation de l'algorithme ***
-                    0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).
+                    0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard).
      (par défaut)   1 : (QUESTION 3 :) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.
     *********************************************/
     int optimisationLevel = 1;
 
     /*** Niveau de verbosité du programme ***
                     0 : aucun affichage autre que la demande de coup et le plateau.
-     (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre de simulations réalisées pour calculer ce
-                        coup et une estimation de la probabilité de victoire pour l’ordinateur.
-                    2 : affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées = nombre d'itérations de l'algorithme.
-                    3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
-                    4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
+     (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur.
+                    2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
+                    3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
     ****************************************/
     int verboseLevel = 1;
 
@@ -140,16 +138,15 @@ int main(int argc, char **argv) {
 
                 "\n\n-o arg (ou --optimisation ou --optimization) avec arg étant un nombre entier positif non nul."
                 "\nPermet de définir le niveau d'optimisation/amélioration de l'algorithme MCTS, c'est-à-dire :"
-                "\n             0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT)."
+                "\n             0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard)."
                 "\n(par défaut) 1 : (Question 3) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible."
 
                 "\n\n-v arg (ou --verbose) avec arg étant un nombre entier positif non nul."
                 "\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :"
                 "\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu."
-                "\n(par défaut) 1 : (Question 1) affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour calculer ce coup et une estimation de la probabilité de victoire pour l’ordinateur."
-                "\n             2 : affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées, ce qui correspond également au nombre d'itérations de l'algorithme."
-                "\n             3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup."
-                "\n             4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup."
+                "\n(par défaut) 1 : (Question 1) affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur en jouant ce coup."
+                "\n             2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup."
+                "\n             3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup."
 
                 "\n\nmethode : {-r (ou --robuste ou --robust) | -m (ou --max) } :"
 

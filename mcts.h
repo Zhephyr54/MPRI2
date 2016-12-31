@@ -75,16 +75,14 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode);
     et en choisissant le coup à l'aide de la méthode methodeChoix.
 
     *** Niveau d'optimisation de l'algorithme ***
-                   0 : fonctionnement normal de l'algorithme MCTS avec UCB (UCT).
+                   0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard).
     (par défaut)   1 : (QUESTION 3 :) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.
 
     *** Niveau de verbosité du programme ***
                    0 : aucun affichage autre que la demande de coup et le plateau.
-    (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre de simulations réalisées pour calculer ce
-                        coup et une estimation de la probabilité de victoire pour l’ordinateur.
-                   2 : affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées = nombre d'itérations de l'algorithme.
-                   3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
-                   4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
+    (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur.
+                   2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
+                   3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
     */
 void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, int optimisationLevel, int verboseLevel);
 

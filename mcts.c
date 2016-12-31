@@ -305,19 +305,15 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, 
 
 	/* fin de l'algorithme  */
 
-    // Affichage du nombre total de simulations / itérations
-    if (verboseLevel >= 2)
-        printf("\nNombre total de simulations/itérations : %d", iter);
-
     // Affichage du nombre de simulations réalisées pour chaque coup
-    if (verboseLevel >= 3) {
+    if (verboseLevel >= 2) {
         printf("\n");
         int i;
         for (i=0 ; i < racine->nb_enfants ; i++) {
             Noeud * noeud = racine->enfants[i];
             printf("\nPour le coup en colonne %d :   Nombre de simulations   : %d", noeud->coup->colonne, noeud->nb_simus);
             // et de la récompense moyenne pour chaque coup
-            if (verboseLevel >= 4) {
+            if (verboseLevel >= 3) {
                 printf("\n                              Moyenne des récompenses : ");
                 if (noeud->nb_simus > 0)
                     printf("%0.4f", (double)noeud->sommes_recompenses/noeud->nb_simus);
@@ -332,7 +328,7 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, 
     // et une estimation de la probabilité de victoire pour l'ordinateur
     if (verboseLevel >= 1) {
         printf("\nCoup joué en colonne %d", noeudMeilleurCoup->coup->colonne);
-        printf("\nNombre de simulations pour le coup joué : %d", noeudMeilleurCoup->nb_simus);
+        printf("\nNombre total de simulations : %d", racine->nb_simus);
         printf("\nEstimation de probabilité de victoire pour l'ordinateur : ");
         if (noeudMeilleurCoup->nb_simus > 0)
             printf("%0.2f %%", (double)noeudMeilleurCoup->nb_victoires/noeudMeilleurCoup->nb_simus * 100);
