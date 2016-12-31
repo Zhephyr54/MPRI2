@@ -20,18 +20,21 @@ int main(int argc, char **argv) {
     /*** Niveau de verbosité du programme ***
                     0 : aucun affichage autre que la demande de coup et le plateau.
      (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur.
-                    2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
-                    3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
+                    2 : affichage (à chaque coup de l’ordinateur) du temps passé dans la boucle principale de l'algorithme MCTS et du nombre d'itérations réalisées.
+                    3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
+                    4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
     ****************************************/
     int verboseLevel = 1;
 
     // Valeurs par défaut
     // temps : 5s
+    // iterations : non limité
     // méthode : robuste
     double temps = 5;  // temps de calcul pour un coup avec MCTS (en secondes)
+    int iterations = -1;    // nombre d'itérations maximal pour l'algorithme MCTS
     MethodeChoixCoup methodeChoix = ROBUSTE; // méthode du choix du meilleur coup à la fin de MCTS
     bool printHelp = false;
-    int robustFlag = 0, maxFlag = 0;
+    bool robustFlag = false, maxFlag = false, timeFlag = false;
 
     // Spécification des options
     static struct option long_options[] = {
@@ -41,6 +44,8 @@ int main(int argc, char **argv) {
         {"robust", no_argument, 0, 'r'},
         {"temps", required_argument, 0, 't'},
         {"time", required_argument, 0, 't'},
+        {"iteration", required_argument, 0, 'i'},
+        {"iterations", required_argument, 0, 'i'},
         {"optimisation", required_argument, 0, 'o'},
         {"optimization", required_argument, 0, 'o'},
         {"verbose", required_argument, 0, 'v'},
@@ -51,7 +56,7 @@ int main(int argc, char **argv) {
     opterr = 0;
     int opt = 0;
 
-    while ( (opt = getopt_long (argc, argv, "hmrt:o:v:", long_options, &option_index)) != -1) {
+    while ( (opt = getopt_long (argc, argv, "hmrt:i:o:v:", long_options, &option_index)) != -1) {
         int intResult = 0;
         double doubleResult = 0;
 
@@ -61,11 +66,24 @@ int main(int argc, char **argv) {
                 break;
 
             case 't' :
-                if (convertStringToDouble(optarg, &doubleResult) && doubleResult > 0)
+                if (convertStringToDouble(optarg, &doubleResult) && doubleResult > 0) {
                     temps = doubleResult;
+                    timeFlag = true;
+                }
                 else {
                     fprintf(stderr, "Argument incorrect : %s.\n", optarg);
                     fprintf(stderr, "L'option -t requiert un nombre décimal (1.5 par exemple) positif non nul en argument.\n");
+                    fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
+                    return 1;
+                }
+                break;
+
+            case 'i' :
+                if (convertStringToInt(optarg, &intResult) && intResult > 0)
+                    iterations = intResult;
+                else {
+                    fprintf(stderr, "Argument incorrect : %s.\n", optarg);
+                    fprintf(stderr, "L'option -i requiert un nombre entier positif non nul en argument.\n");
                     fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
                     return 1;
                 }
@@ -78,7 +96,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
                     return 1;
                 }
-                    maxFlag = 1;
+                    maxFlag = true;
                     methodeChoix = MAX;
                 break;
 
@@ -89,7 +107,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "Utiliser -h ou --help pour obtenir de l'aide.\n");
                     return 1;
                 }
-                    robustFlag = 1;
+                    robustFlag = true;
                     methodeChoix = ROBUSTE;
                 break;
 
@@ -131,10 +149,16 @@ int main(int argc, char **argv) {
 
     if (printHelp) {
         printf( "\nutilisation : Puissance4 [options] [methode]"
+                "\n(L'ordre n'a aucune importance)"
                 "\n\noptions :"
 
                 "\n\n-t arg (ou --temps ou --time) avec arg étant un nombre décimal positif non nul (par exemple 1.5)."
                 "\nPermet de définir la limite de temps imposée à l'ordinateur pour l'exécution de l'algorithme MCTS."
+                "\nSi un nombre d'itérations maximal est également donné, le facteur le plus limitant sera appliqué."
+
+                "\n\n-i arg (ou --iteration ou --iterations) avec arg étant un nombre entier positif non nul."
+                "\nPermet de définir le nombre d'itérations maximal imposé à l'ordinateur pour l'exécution de l'algorithme MCTS."
+                "\nPrend le pas sur la limite de temps (de 5 secondes) par défaut. Si une limite de temps est également donnée, le facteur le plus limitant sera appliqué."
 
                 "\n\n-o arg (ou --optimisation ou --optimization) avec arg étant un nombre entier positif non nul."
                 "\nPermet de définir le niveau d'optimisation/amélioration de l'algorithme MCTS, c'est-à-dire :"
@@ -145,8 +169,9 @@ int main(int argc, char **argv) {
                 "\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :"
                 "\n             0 : aucun affichage autre que la demande de coup et le plateau de jeu."
                 "\n(par défaut) 1 : (Question 1) affichage (à chaque coup de l’ordinateur) du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur en jouant ce coup."
-                "\n             2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup."
-                "\n             3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup."
+                "\n             2 : affichage (à chaque coup de l’ordinateur) du temps passé dans la boucle principale de l'algorithme MCTS et du nombre d'itérations réalisées."
+                "\n             3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup."
+                "\n             4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup."
 
                 "\n\nmethode : {-r (ou --robuste ou --robust) | -m (ou --max) } :"
 
@@ -156,6 +181,10 @@ int main(int argc, char **argv) {
                 "\n\n");
         return 0;
     }
+
+    // Si le nombre d'itérations est précisé et que le temps ne l'est pas
+    if (!timeFlag && iterations >= 0)
+        temps = -1; // on enlève le temps de 5 secondes par défaut
 
 	Coup * coup = NULL;
 	FinDePartie fin;
@@ -190,7 +219,7 @@ int main(int argc, char **argv) {
 		else {
 			// tour de l'Ordinateur
 
-			ordijoue_mcts(etat, temps, methodeChoix, optimisationLevel, verboseLevel);
+			ordijoue_mcts(etat, temps, iterations, methodeChoix, optimisationLevel, verboseLevel);
 
 		}
 

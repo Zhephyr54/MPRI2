@@ -71,7 +71,8 @@ void propagerResultat(Noeud * noeud, FinDePartie resultat);
 Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode);
 
 /** Calcule et joue un coup de l'ordinateur avec MCTS-UCT
-    en tempsmax secondes
+    en tempsmax secondes ou avec iterationxmax itérations (selon le plus limitant)
+    (l'un de ces deux paramètres peut être ignoré en le mettant à une valeur nulle ou négative)
     et en choisissant le coup à l'aide de la méthode methodeChoix.
 
     *** Niveau d'optimisation de l'algorithme ***
@@ -81,9 +82,10 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode);
     *** Niveau de verbosité du programme ***
                    0 : aucun affichage autre que la demande de coup et le plateau.
     (par défaut)   1 : (QUESTION 1:) affichage (à chaque coup de l’ordinateur) du coup joué, du nombre total de simulations réalisées (= nombre d'itérations) et d'une estimation de la probabilité de victoire pour l’ordinateur.
-                   2 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
-                   3 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
+                   2 : affichage (à chaque coup de l’ordinateur) du temps passé dans la boucle principale de l'algorithme MCTS et du nombre d'itérations réalisées.
+                   3 : affichage (à chaque coup de l’ordinateur) du nombre de simulations réalisées pour chaque coup.
+                   4 : affichage (à chaque coup de l’ordinateur) de la moyenne des récompenses pour chaque coup.
     */
-void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, int optimisationLevel, int verboseLevel);
+void ordijoue_mcts(Etat * etat, double tempsmax, int iterationsmax, MethodeChoixCoup methodeChoix, int optimisationLevel, int verboseLevel);
 
 #endif // MCTS_H_INCLUDED

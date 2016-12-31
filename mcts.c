@@ -153,8 +153,8 @@ FinDePartie simulerPartie(Etat * etat, bool choisirCoupGagnant) {
         Coup** coups = coups_possibles(etat);
         Coup* coupAJoue = NULL;
 
-        // Si on doit choisir un coup gagnant quand cela est possible
-        if (choisirCoupGagnant) {
+        // Si on doit choisir un coup gagnant quand cela est possible (si c'est le tour de l'ordinateur)
+        if (choisirCoupGagnant && etat->joueur == 1) {
             int k = 0;
             // On teste tous les coups pour voir si un des coups est gagnant
             while (coups[k] != NULL && coupAJoue == NULL) {
@@ -257,7 +257,14 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode) {
     return noeudMeilleurCoup;
 }
 
-void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, int optimisationLevel, int verboseLevel) {
+void ordijoue_mcts(Etat * etat, double tempsmax, int iterationsmax, MethodeChoixCoup methodeChoix, int optimisationLevel, int verboseLevel) {
+
+	// Condition d'arrêt de l'algorithme inexistante
+	if (tempsmax <= 0 && iterationsmax <= 0) {
+        fprintf(stderr, "Condition d'arrêt inexsitante pour l'algorithme MCTS : le temps ou le nombre d'itérations maximal doit être précisé.");
+        exit(EXIT_FAILURE);
+	}
+
 	clock_t tic, toc;
 	tic = clock();
 	double temps;
@@ -297,7 +304,7 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, 
 		toc = clock();
 		temps = ((double) (toc - tic))/ CLOCKS_PER_SEC;
 		iter ++;
-	} while ( temps < tempsmax );
+	} while ( (tempsmax <= 0 || temps < tempsmax) && (iterationsmax <= 0 || iter < iterationsmax) );
 
     // On cherche le meilleur coup possible
     Noeud * noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine, methodeChoix);
@@ -305,15 +312,20 @@ void ordijoue_mcts(Etat * etat, double tempsmax, MethodeChoixCoup methodeChoix, 
 
 	/* fin de l'algorithme  */
 
+    // Affichage du temps passé dans la boucle principale de l'algorithme MCTS et du nombre d'itérations.
+    if (verboseLevel >= 2)
+        printf("\nTemps utilisé       : %0.4fs"
+               "\nNombre d'itérations : %d\n", temps, iter);
+
     // Affichage du nombre de simulations réalisées pour chaque coup
-    if (verboseLevel >= 2) {
+    if (verboseLevel >= 3) {
         printf("\n");
         int i;
         for (i=0 ; i < racine->nb_enfants ; i++) {
             Noeud * noeud = racine->enfants[i];
             printf("\nPour le coup en colonne %d :   Nombre de simulations   : %d", noeud->coup->colonne, noeud->nb_simus);
             // et de la récompense moyenne pour chaque coup
-            if (verboseLevel >= 3) {
+            if (verboseLevel >= 4) {
                 printf("\n                              Moyenne des récompenses : ");
                 if (noeud->nb_simus > 0)
                     printf("%0.4f", (double)noeud->sommes_recompenses/noeud->nb_simus);
