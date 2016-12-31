@@ -319,7 +319,6 @@ void ordijoue_mcts(Etat * etat, double tempsmax, int iterationsmax, MethodeChoix
 
     // Affichage du nombre de simulations réalisées pour chaque coup
     if (verboseLevel >= 3) {
-        printf("\n");
         int i;
         for (i=0 ; i < racine->nb_enfants ; i++) {
             Noeud * noeud = racine->enfants[i];
