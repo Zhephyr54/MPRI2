@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
     /*** Niveau d'optimisation de l'algorithme ***
                     0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard).
      (par défaut)   1 : (QUESTION 3 :) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.
+                    2 : lorsqu'un coup gagnant est possible, l'algorithme n'est pas utilisé et le coup est joué directement.
     *********************************************/
     int optimisationLevel = 1;
 
@@ -164,6 +165,7 @@ int main(int argc, char **argv) {
                 "\nPermet de définir le niveau d'optimisation/amélioration de l'algorithme MCTS, c'est-à-dire :"
                 "\n             0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard)."
                 "\n(par défaut) 1 : (Question 3) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible."
+                "\n             2 : lorsqu'un coup gagnant est possible, l'algorithme n'est pas utilisé et le coup est joué directement."
 
                 "\n\n-v arg (ou --verbose) avec arg étant un nombre entier positif non nul."
                 "\nPermet de définir le niveau de verbosité du programme, c'est-à-dire :"

@@ -78,6 +78,7 @@ Noeud * trouverNoeudMeilleurCoup(Noeud * racine, MethodeChoixCoup methode);
     *** Niveau d'optimisation de l'algorithme ***
                    0 : fonctionnement basique de l'algorithme MCTS avec UCB (UCT) (les simulations sont réalisées au hasard).
     (par défaut)   1 : (QUESTION 3 :) amélioration des simulations consistant à toujours choisir un coup gagnant lorsque cela est possible.
+                   2 : lorsqu'un coup gagnant est possible, l'algorithme n'est pas utilisé et le coup est joué directement.
 
     *** Niveau de verbosité du programme ***
                    0 : aucun affichage autre que la demande de coup et le plateau.

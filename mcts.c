@@ -267,10 +267,11 @@ void ordijoue_mcts(Etat * etat, double tempsmax, int iterationsmax, MethodeChoix
 
 	clock_t tic, toc;
 	tic = clock();
-	double temps;
+	double temps = 0;
 
 	Coup ** coups;
-	Coup * meilleur_coup ;
+	Noeud * noeudMeilleurCoup = NULL;
+	Coup * meilleur_coup;
 
 	// Créer l'arbre de recherche
 	Noeud * racine = nouveauNoeud(NULL, NULL);
@@ -283,32 +284,38 @@ void ordijoue_mcts(Etat * etat, double tempsmax, int iterationsmax, MethodeChoix
 	while ( coups[k] != NULL) {
 		enfant = ajouterEnfant(racine, coups[k]);
 		k++;
+		// Si le niveau d'optimisation et suffisant et qu'un coup gagnant est possible
+		if (optimisationLevel >= 2 && testFin(enfant->etat) == ORDI_GAGNE)
+            noeudMeilleurCoup = enfant;   // on le joue tout de suite
 	}
 
 	/* Algorithme MCTS-UCS */
 	int iter = 0;
 
-	do {
-        // Sélection
-        Noeud * noeudSelectionne = selectionUCB(racine);
-        // Expansion
-        enfant = expansionNoeud(noeudSelectionne);
-        // Simulation
-        Etat * etatCopie = copieEtat(enfant->etat);
-        bool choisirCoupGagnant = optimisationLevel >= 1;
-        FinDePartie resultat = simulerPartie(etatCopie, choisirCoupGagnant);
-        free(etatCopie);
-        // Propagation
-        propagerResultat(enfant, resultat);
+    if (noeudMeilleurCoup == NULL) {    // Optimisation
+        do {
+            // Sélection
+            Noeud * noeudSelectionne = selectionUCB(racine);
+            // Expansion
+            enfant = expansionNoeud(noeudSelectionne);
+            // Simulation
+            Etat * etatCopie = copieEtat(enfant->etat);
+            bool choisirCoupGagnant = optimisationLevel >= 1;
+            FinDePartie resultat = simulerPartie(etatCopie, choisirCoupGagnant);
+            free(etatCopie);
+            // Propagation
+            propagerResultat(enfant, resultat);
 
-		toc = clock();
-		temps = ((double) (toc - tic))/ CLOCKS_PER_SEC;
-		iter ++;
-	} while ( (tempsmax <= 0 || temps < tempsmax) && (iterationsmax <= 0 || iter < iterationsmax) );
+            toc = clock();
+            temps = ((double) (toc - tic))/ CLOCKS_PER_SEC;
+            iter ++;
+        } while ( (tempsmax <= 0 || temps < tempsmax) && (iterationsmax <= 0 || iter < iterationsmax) );
 
-    // On cherche le meilleur coup possible
-    Noeud * noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine, methodeChoix);
-    meilleur_coup = noeudMeilleurCoup->coup;
+        // On cherche le meilleur coup possible
+        noeudMeilleurCoup = trouverNoeudMeilleurCoup(racine, methodeChoix);
+    }
+
+        meilleur_coup = noeudMeilleurCoup->coup;
 
 	/* fin de l'algorithme  */
 
